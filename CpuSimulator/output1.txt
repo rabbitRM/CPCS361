@@ -1,0 +1,54 @@
+<< Final state of system: 
+  Current Available Main Memory = 120
+  Current Devices               = 0
+  
+  Completed jobs: 
+  ----------------
+  Job ID   Arrival Time    Finish Time  Turnaround Time  
+  =================================================================
+   1         1                   40                  39              
+   2         2                  102                 100              
+   3         3                   25                  22              
+   4         5                   93                  88              
+   5         7                   81                  74              
+   6         9                   67                  58              
+   7        10                   98                  88             
+   8        12                  117                 105              
+  10        20                  114                  94              
+  11        26                   53                  27              
+  12        45                   56                  11              
+  13        58                   63                   5              
+ 
+
+
+System Turnaround Time =  59.250
+
+
+****************************************************************************
+
+<< Final state of system: 
+  Current Available Main Memory = 40
+  Current Devices               = 0
+ 
+  Completed jobs: 
+  ----------------
+  Job ID   Arrival Time    Finish Time  Turnaround Time  
+  =================================================================
+   1         2                   35                  33              
+   2         3                   23                  20              
+   3         4                   67                  63              
+   4         6                   22                  16              
+   5         9                   46                  37              
+   6        12                  115                 103              
+   7        15                  127                 112              
+   8        17                   57                  40              
+  10        22                  160                 138             
+  11        24                  125                 101              
+  12        27                  191                 164              
+  13        29                   77                  48              
+  14        33                  190                 157             
+  15        35                  157                 122              
+
+
+
+System Turnaround Time =  82.429
