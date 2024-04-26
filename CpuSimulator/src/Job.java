@@ -7,17 +7,28 @@ public class Job {
     private int deviceNum;
     private int burstTime;
     private int priority;
-    private int startTime ;
-    private int finishTime ;
-    private int remainTime ;
+    private double startTime ;
+    private double finishTime ;
+    private double remainRT ;
     private int enterCount ;
     private int totalTimeInCPU;
+    private double TAT ;
+    private int status ;
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
 
     public Job(int arrTime, int jobNum) {
         this.arrTime = arrTime;
         this.jobNum = jobNum;
     }
 
+    
     public int getTotalTimeInCPU() {
         return totalTimeInCPU;
     }
@@ -35,14 +46,13 @@ public class Job {
     }
     
 
-    public int getRemainTime() {
-        return remainTime;
+    public double getRemainBT() {
+        return remainRT;
     }
 
-    public void setRemainTime(int remainTime) {
-        this.remainTime = remainTime;
+    public void setRemainBT(double remainTime) {
+        this.remainRT = remainTime;
     }
-    private int TAT ;
 
     public Job() {
     }
@@ -59,6 +69,7 @@ public class Job {
         this.deviceNum = deviceNum;
         this.burstTime = burstTime;
         this.priority = priority;
+        this.remainRT = burstTime ;
     }
 
     
@@ -110,27 +121,27 @@ public class Job {
         this.priority = priority;
     }
 
-    public int getStartTime() {
+    public double getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(int startTime) {
+    public void setStartTime(double startTime) {
         this.startTime = startTime;
     }
 
-    public int getFinishTime() {
+    public double getFinishTime() {
         return finishTime;
     }
 
-    public void setFinishTime(int finishTime) {
+    public void setFinishTime(double finishTime) {
         this.finishTime = finishTime;
     }
 
-    public int getTAT() {
-        return TAT;
+    public double getTAT() {
+        return finishTime - arrTime;
     }
 
-    public void setTAT(int TAT) {
+    public void setTAT(double TAT) {
         this.TAT = TAT;
     }
     
