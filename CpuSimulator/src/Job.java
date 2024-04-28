@@ -7,9 +7,9 @@ public class Job {
     private int deviceNum;
     private int burstTime;
     private int priority;
-    private double startTime ;
-    private double finishTime ;
-    private double remainRT ;
+    private int startTime ;
+    private int finishTime ;
+    private int remainRT ;
     private int enterCount ;
     private int totalTimeInCPU;
     private double TAT ;
@@ -46,11 +46,11 @@ public class Job {
     }
     
 
-    public double getRemainBT() {
+    public int getRemainBT() {
         return remainRT;
     }
 
-    public void setRemainBT(double remainTime) {
+    public void setRemainBT(int remainTime) {
         this.remainRT = remainTime;
     }
 
@@ -121,19 +121,19 @@ public class Job {
         this.priority = priority;
     }
 
-    public double getStartTime() {
+    public int getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(double startTime) {
+    public void setStartTime(int startTime) {
         this.startTime = startTime;
     }
 
-    public double getFinishTime() {
+    public int getFinishTime() {
         return finishTime;
     }
 
-    public void setFinishTime(double finishTime) {
+    public void setFinishTime(int finishTime) {
         this.finishTime = finishTime;
     }
 
