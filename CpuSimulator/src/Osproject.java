@@ -9,7 +9,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Scanner;
 
-// status 0 -> running , 1 -> in readyQ , 2 -> in holdQ , 3 -> finished (completeQ) 
+// status: running on the CPU, in the Ready or Hold Queues, or finished at time 11
 public class Osproject {
 
     private static int startTime;
@@ -48,12 +48,12 @@ public class Osproject {
     public static Queue<Job> ReadyQ = new LinkedList();
     public static Job CPU_Process = new Job();
     public static Queue<Job> completeQ = new LinkedList();
-
+    public static Queue<Job> displayQ = new LinkedList();    
+   public static double systemTAT = 0;
     public static int currentTime;
 
-//    public static int c =1;
     public static void main(String[] args) throws FileNotFoundException {
-        int systemStateTime;
+//        int systemStateTime;
         String command;
         //create file object
         File inputFile = new File("input3.txt");
@@ -65,7 +65,7 @@ public class Osproject {
         // check if file exists or not .
         // read from input file , write in outputFile .  
         Scanner input = new Scanner(inputFile);
-        output = new PrintWriter("outputFile.txt");
+        output = new PrintWriter("output102.txt");
 
         while (input.hasNext()) {
             command = input.next();
@@ -75,21 +75,13 @@ public class Osproject {
             } else if (command.equalsIgnoreCase("A")) {
                 jobArrivel(input);
             } else if (command.equalsIgnoreCase("D")) {
-                systemStateTime = input.nextInt();
+                int systemStateTime = input.nextInt();
 
-                if (systemStateTime != 999999) {
-                    //  it's not the final state of the system.
-                    // The code adds a new process (job) to the queue (allJobsQ)
-                    // representing the system state at that time.
-                    Job job = new Job(systemStateTime, -1);
-                    submitQ.add(job);
+                if (systemStateTime != 999999)
+                    submitQ.add(new Job(systemStateTime, -1));
+                  else {
 
-//                    for(Job j : submitQ){
-//                        System.out.println(j.getJobNum());
-//                    }
-//                    System.out.println("--------------======");
-                } else {
-
+                    displayQ.addAll(submitQ);
                     // it indicates the final state of the system
                     // execution of jobs
                     Job j = submitQ.poll();
@@ -101,11 +93,10 @@ public class Osproject {
                     currentTime = j.getArrTime();
                     quantum = j.getBurstTime();
                     CPU_Process = j;
-//                    CPU_Process.setStatus(0);
+                    CPU_Process.setStatus("Running On The CPU"); //***
                     CPU_Process.setStartTime(currentTime);
                     CPU_Process.setFinishTime(currentTime + quantum);
-//                    System.out.println(CPU_Process.getStartTime()+"\t"+CPU_Process.getFinishTime());
-//                    cpu_execution();
+
 
                     i = 0;
                     e = 0;
@@ -115,7 +106,6 @@ public class Osproject {
                             i = 999999;
                         } else {
                             i = submitQ.peek().getArrTime();
-//                            System.out.println("i="+i);
                         }
 
                         if (CPU_Process == null) {
@@ -134,6 +124,7 @@ public class Osproject {
                             externalEvent();
                         }
                     }
+                    
 
                     finalState();
                     prepForNextConfig();
@@ -145,6 +136,8 @@ public class Osproject {
         }
 
         input.close();
+        output.flush();
+        output.close();
         // END OF MAIN :)---------------------------------------------------      
 
     }
@@ -155,6 +148,7 @@ public class Osproject {
         holdQ2.clear();
         ReadyQ.clear();
         completeQ.clear();
+        displayQ.clear();
         CPU_Process = null;
         startTime = 0;
         memorySize = 0;
@@ -164,6 +158,7 @@ public class Osproject {
         availableDevices = 0;
         SR = 0;
         AR = 0;
+        systemTAT = 0;
     }
 
     public static void systemConfiguration(Scanner input) {
@@ -173,10 +168,8 @@ public class Osproject {
         serialDevices = Integer.parseInt(input.next().substring(2));
         availableMemory = memorySize;
         availableDevices = serialDevices;
-        //System.out.println(startTime+"\t"+memorySize+"\t"+serialDevices);
     }
 
-    // TASK (0)
     public static void jobArrivel(Scanner input) {
         int numJ, arrJ, memoJ, devJ, burstJ, prioJ;
         arrJ = Integer.parseInt(input.next());
@@ -190,10 +183,10 @@ public class Osproject {
         //devices in the system for the job, the job is rejected never gets to one of the Hold Queues
         if (memoJ <= memorySize && devJ <= serialDevices) {
             submitQ.add(job);
+            job.setStatus("Submit Queue");
             jobNum++;
         }
-//        System.out.println(c+"\n"+job.getArrTime()+"\t"+job.getJobNum()+"\t"+job.getMemoryUnit()+"\t"+job.getDeviceNum()+"\t"+job.getBurstTime()+"\t"+job.getPriority()+"\t"+job.getRemainBT());
-//        c++;
+
     }
 
     // 
@@ -205,21 +198,22 @@ public class Osproject {
             TerminateJob();
             if (!ReadyQ.isEmpty()) {
                 CPU_Process = ReadyQ.poll();
+                CPU_Process.setStatus("Running On The CPU"); //***
                 if (AR < CPU_Process.getRemainBT()) {
                     quantum = AR;
                 } else {
                     quantum = CPU_Process.getRemainBT();
                 }
 //                    cpu_execution();
-                    CPU_Process.setStartTime(currentTime);
-                    if (quantum < CPU_Process.getRemainBT()) {
-                        CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
-                    } else {
-                        CPU_Process.setFinishTime(CPU_Process.getStartTime() + CPU_Process.getRemainBT());
-                    }
+                CPU_Process.setStartTime(currentTime);
+                if (quantum < CPU_Process.getRemainBT()) {
+                    CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
+                } else {
+                    CPU_Process.setFinishTime(CPU_Process.getStartTime() + CPU_Process.getRemainBT());
+                }
 
-                    SRAR_Update();
-                
+                SRAR_Update();
+
             }
         }
     }
@@ -237,14 +231,16 @@ public class Osproject {
             SRAR_Update();
         } else {
             ReadyQ.add(CPU_Process);
+            CPU_Process.setStatus("Ready Queue"); //***
             SRAR_Update();
             CPU_Process = ReadyQ.poll();
+            CPU_Process.setStatus("Running On The CPU"); //***
             if (AR < CPU_Process.getRemainBT()) {
                 quantum = AR;
             } else {
                 quantum = CPU_Process.getRemainBT();
             }
-             CPU_Process.setStartTime(currentTime);
+            CPU_Process.setStartTime(currentTime);
             if (quantum < CPU_Process.getRemainBT()) {
                 CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
             } else {
@@ -256,18 +252,7 @@ public class Osproject {
 
     }
 
-//    public static void cpu_execution() {
-//
-//        CPU_Process.setStartTime(currentTime);
-//        if (quantum < CPU_Process.getRemainBT()) {
-//            CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
-//            CPU_Process.setRemainBT(CPU_Process.getRemainBT() - quantum);
-//        } else {
-//            CPU_Process.setFinishTime(CPU_Process.getStartTime() + CPU_Process.getRemainBT());
-//            CPU_Process.setRemainBT(0);
-//        }
-//
-//    }
+    
     //If new Process arrives
     //P Enter ready queue
     //Update SR and AR
@@ -284,32 +269,33 @@ public class Osproject {
                 // process is put in the Ready Queue. 
             } else if (j.getDeviceNum() <= availableDevices && j.getMemoryUnit() <= availableMemory) {
                 ReadyQ.add(j);
-//                j.setStatus(1);
+                j.setStatus("Ready Queue"); //***
                 SRAR_Update();
                 availableDevices -= j.getDeviceNum();
                 availableMemory -= j.getMemoryUnit();
             } else {
                 if (j.getPriority() == 1) {
                     HoldQ1.add(j);
+                    j.setStatus("Hold Queue 1"); //***
                 } else {
                     holdQ2.add(j);
+                    j.setStatus("Hold Queue 2");
                 }
             }
         }
 
     }
 
-    
     public static void SRAR_Update() {
-        if(!ReadyQ.isEmpty()){
-        int totalBurstTime = 0;
+        if (!ReadyQ.isEmpty()) {
+            int totalBurstTime = 0;
 
-        for (Job job : ReadyQ) {
-            totalBurstTime += job.getRemainBT();
-           
-        }
-        SR = totalBurstTime;
-        AR = SR / ReadyQ.size();
+            for (Job job : ReadyQ) {
+                totalBurstTime += job.getRemainBT();
+
+            }
+            SR = totalBurstTime;
+            AR = SR / ReadyQ.size();
         }
     }
 
@@ -326,26 +312,21 @@ public class Osproject {
         // release resources and go to the completedQ
 //        CPU_Process.setStatus(3);
         completeQ.add(CPU_Process);
+        CPU_Process.setStatus("Finished At Time "+currentTime);//********
         completeNum++;
         CPU_Process = null;
-        // process need the CPU again ! go back to the readyQ :)
-//            else {
-//                CPU_Process.setStatus(1);
-//                ReadyQ.add(CPU_Process);
-//                SRAR_Update();
-//            }
 
         // LEAVE ONE OF THE HOLD QUEUES AND MOVE TO THE READY QUEUE.
         while (!HoldQ1.isEmpty()) {
             Job j = HoldQ1.poll();
-            j.setStatus(1);
             ReadyQ.add(j);
+            j.setStatus("Hold Queue 1");
             SRAR_Update();
         }
 
         while (!holdQ2.isEmpty()) {
             Job j = holdQ2.poll();
-            j.setStatus(1);
+            j.setStatus("Hold Queue 2");
             ReadyQ.add(j);
             SRAR_Update();
         }
@@ -354,180 +335,183 @@ public class Osproject {
     }
 
     // SORTING THE COMPLETE QUEUE FOR THE OUPPUT FORMAT 
-    public static void sortCompleteQueue() {
+    public static void sortDisplayQueue() {
 
         // Creating a list from the queue
-        List<Job> list = new ArrayList<>(completeQ);
+        List<Job> list = new ArrayList<>(displayQ);
 
         // Sort based on arrival time
         list.sort(Comparator.comparing(Job::getJobNum));
 
         // Clearing the original queue
-        completeQ.clear();
+        displayQ.clear();
 
         // Adding sorted processes back to the queue
-        completeQ.addAll(list);
+        displayQ.addAll(list);
     }
 
-    
+  
     //------------
     public static void specificState(int currentTime) {
-        System.out.println("System Configuration:	Memory size: " + memorySize + "		No of devices: " + serialDevices
-                + "\nDisplay Command:\n"
+        output.println("System Configuration:	Memory size: " + memorySize + "		No of devices: " + serialDevices
+                + "\nDisplay Command: currunt time: "+currentTime+"\n"
                 + "-----------------------------------------------------------------------------------------------------------------");
-        sortCompleteQueue();
-        System.out.println("|  Process   | Status           | Burst Time     | Arrival Time         |  Completion Time | Turnaround Time |"
-                + "\n|------------+--------------+---------------+---------------------+----------------------+----------------------|");
+        sortDisplayQueue();
+        output.println("|  Process   |      Status      |   Burst Time  |     Arrival Time    |  Completion Time | Turnaround Time |"
+                +        "\n|------------+------------------+---------------+---------------------+------------------+-----------------|");
 
-      
-        for (Job job : completeQ) {
-
-            switch (job.getStatus()) {
-                case 0:
-                    System.out.println("\t" + job.getJobNum() + "\tRunning\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-                case 1:
-                    System.out.println("\t" + job.getJobNum() + "\tReady Queue\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-                case 2:
-                    System.out.println("\t" + job.getJobNum() + "\tHold Queue\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-                case 3:
-                    System.out.println("\t" + job.getJobNum() + "\tFinished at time \t" + job.getFinishTime() + "\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-            }
+       for (Job job : displayQ) {
+       if(job.getJobNum() !=-1 && job.getArrTime() <= currentTime)
+       output.printf(" %-12d %-25s %-18d %-19d %-15d %3d\n", job.getJobNum(),job.getStatus(),job.getBurstTime(), job.getArrTime(),job.getFinishTime(),job.getTAT());
         }
-        System.out.println("");
+        output.println("");
         int firstCount = 1;
+        
+        if(!submitQ.isEmpty()){
         for (Job job : submitQ) {
             if (job.getJobNum() != -1) {
                 if (firstCount == 1) {
-                    System.out.print("Contents of Submit Ready Queue: " + job.getJobNum());
+                    output.print("Contents of Submit Ready Queue: " + job.getJobNum());
                 } else {
-                    System.out.print(" , " + job.getJobNum());
+                   output.print(" , " + job.getJobNum());
                 }
                 firstCount++;
             }
         }
-
-        System.out.println("");
+        }else {
+            output.print("Contents of Submit Ready Queue: No Processes");
+        }
+        
+        output.println("");
+        if(!ReadyQ.isEmpty()){
         firstCount = 1;
-
         for (Job job : ReadyQ) {
             if (firstCount == 1) {
-                System.out.print("Contents of Ready Queue: " + job.getJobNum());
+                output.print("Contents of Ready Queue: " + job.getJobNum());
             } else {
-                System.out.print(" , " + job.getJobNum());
+                output.print(" , " + job.getJobNum());
             }
             firstCount++;
         }
-
-        System.out.println("");
+        }else {
+             output.print("Contents of Ready Queue: No Processes");
+        }
+        
+        output.println("");
+        if(!HoldQ1.isEmpty()){
         firstCount = 1;
-
         for (Job job : HoldQ1) {
             if (firstCount == 1) {
-                System.out.print("Contents of Hold Queue 1: " + job.getJobNum());
+                output.print("Contents of Hold Queue 1: " + job.getJobNum());
             } else {
-                System.out.print(" , " + job.getJobNum());
+                output.print(" , " + job.getJobNum());
             }
             firstCount++;
         }
-
-        System.out.println("");
+        }else {
+             output.print("Contents of Hold Queue 1: No Processes");
+        }
+        
+        output.println("");
+        if(!holdQ2.isEmpty()){
         firstCount = 1;
-
         for (Job job : holdQ2) {
             if (firstCount == 1) {
-                System.out.print("Contents of Hold Queue 2: " + job.getJobNum());
+               output.print("Contents of Hold Queue 2: " + job.getJobNum());
             } else {
-                System.out.print(" , " + job.getJobNum());
+                output.print(" , " + job.getJobNum());
             }
             firstCount++;
         }
-
-        System.out.println("------------------------------------------------------------------------");
+        }else {
+             output.print("Contents of Hold Queue 2: No Processes");
+        }
+        output.println("");
+        output.println("------------------------------------------------------------------------");
 
     }
 
     public static void finalState() {
-        double systemTAT = 0;
-        System.out.println("System Configuration:	Memory size: " + memorySize + "		No of devices: " + serialDevices
+         output.println("System Configuration:	Memory size: " + memorySize + "		No of devices: " + serialDevices
                 + "\nDisplay Command:\n"
                 + "-----------------------------------------------------------------------------------------------------------------");
-        sortCompleteQueue();
-        System.out.println("|  Process   | Status           | Burst Time     | Arrival Time         |  Completion Time | Turnaround Time |"
-                + "\n|------------+--------------+---------------+---------------------+----------------------+----------------------|");
+        sortDisplayQueue();
+        output.println("|  Process   |      Status      |   Burst Time  |     Arrival Time    |  Completion Time | Turnaround Time |"
+                +        "\n|------------+------------------+---------------+---------------------+------------------+-----------------|");
 
-     
-        for (Job job : completeQ) {
-            systemTAT += job.getTAT();
-            switch (job.getStatus()) {
-                case 0:
-                    System.out.println("\t" + job.getJobNum() + "\tRunning\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-                case 1:
-                    System.out.println("\t" + job.getJobNum() + "\tReady Queue\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-                case 2:
-                    System.out.println("\t" + job.getJobNum() + "\tHold Queue\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-                case 3:
-                    System.out.println("\t" + job.getJobNum() + "\tFinished at time \t" + job.getFinishTime() + "\t" + job.getBurstTime() + "\t" + job.getArrTime() + "\t" + job.getFinishTime() + "\t" + job.getTAT());
-                    break;
-            }
+        for (Job job : displayQ) {
+       if(job.getJobNum() !=-1){
+       output.printf(" %-12d %-25s %-18d %-19d %-15d %3d\n", job.getJobNum(),job.getStatus(),job.getBurstTime(), job.getArrTime(),job.getFinishTime(),job.getTAT());
+      systemTAT+= job.getTAT();
+       }
         }
-        System.out.println("");
+        output.println("");
         int firstCount = 1;
+        
+        if(!submitQ.isEmpty()){
         for (Job job : submitQ) {
             if (job.getJobNum() != -1) {
                 if (firstCount == 1) {
-                    System.out.print("Contents of Submit Ready Queue: " + job.getJobNum());
+                    output.print("Contents of Submit Ready Queue: " + job.getJobNum());
                 } else {
-                    System.out.print(" , " + job.getJobNum());
+                   output.print(" , " + job.getJobNum());
                 }
                 firstCount++;
             }
         }
-
-        System.out.println("");
+        }else {
+            output.print("Contents of Submit Ready Queue: No Processes");
+        }
+        
+        output.println("");
+        if(!ReadyQ.isEmpty()){
         firstCount = 1;
-
         for (Job job : ReadyQ) {
             if (firstCount == 1) {
-                System.out.print("Contents of Ready Queue: " + job.getJobNum());
+                output.print("Contents of Ready Queue: " + job.getJobNum());
             } else {
-                System.out.print(" , " + job.getJobNum());
+                output.print(" , " + job.getJobNum());
             }
             firstCount++;
         }
-
-        System.out.println("");
+        }else {
+             output.print("Contents of Ready Queue: No Processes");
+        }
+        
+        output.println("");
+        if(!HoldQ1.isEmpty()){
         firstCount = 1;
-
         for (Job job : HoldQ1) {
             if (firstCount == 1) {
-                System.out.print("Contents of Hold Queue 1: " + job.getJobNum());
+                output.print("Contents of Hold Queue 1: " + job.getJobNum());
             } else {
-                System.out.print(" , " + job.getJobNum());
+                output.print(" , " + job.getJobNum());
             }
             firstCount++;
         }
-
-        System.out.println("");
+        }else {
+             output.print("Contents of Hold Queue 1: No Processes");
+        }
+        
+        output.println("");
+        if(!holdQ2.isEmpty()){
         firstCount = 1;
-
         for (Job job : holdQ2) {
             if (firstCount == 1) {
-                System.out.print("Contents of Hold Queue 2: " + job.getJobNum());
+               output.print("Contents of Hold Queue 2: " + job.getJobNum());
             } else {
-                System.out.print(" , " + job.getJobNum());
+                output.print(" , " + job.getJobNum());
             }
             firstCount++;
         }
+        }else {
+             output.print("Contents of Hold Queue 2: No Processes");
+        }
+        output.println("");
+        output.println("------------------------------------------------------------------------");
+        output.printf("System Turnaround Time: %.2f\n" , (systemTAT / completeQ.size()));
+        output.println("------------------------------------------------------------------------\n\n");
 
-        System.out.println("------------------------------------------------------------------------\n");
-        System.out.println("System Turnaround Time: " + (systemTAT / completeQ.size()));
     }
 
 }
