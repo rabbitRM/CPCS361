@@ -12,14 +12,14 @@ public class Job {
     private int remainRT ;
     private int enterCount ;
     private int totalTimeInCPU;
-    private double TAT ;
-    private int status ;
+    private int TAT ;
+    private String status ;
 
-    public int getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(int status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 
@@ -137,11 +137,14 @@ public class Job {
         this.finishTime = finishTime;
     }
 
-    public double getTAT() {
+    public int getTAT() {
+        if(finishTime - arrTime < 0)
+            return 0 ;
+        
         return finishTime - arrTime;
     }
 
-    public void setTAT(double TAT) {
+    public void setTAT(int TAT) {
         this.TAT = TAT;
     }
     
