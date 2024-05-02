@@ -1,7 +1,8 @@
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,8 +10,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Scanner;
 
-// status: running on the CPU, in the Ready or Hold Queues, or finished at time 11
-public class Osproject {
+public class DRRproject {
 
     private static int startTime;
     private static int memorySize;
@@ -24,152 +24,144 @@ public class Osproject {
     public static int SR;
     public static int AR;
     public static PrintWriter output;
-    public static int completeNum;
     public static Queue<Job> submitQ = new LinkedList();
-    public static PriorityQueue<Job> HoldQ1 = new PriorityQueue<Job>(new Comparator<Job>() {
-        @Override
-        public int compare(Job w1, Job w2) {
-            if (w1.getMemoryUnit() < w2.getMemoryUnit()) {
-                return -1;
-            } else if (w1.getMemoryUnit() == w2.getMemoryUnit()) {
-                if (w1.getArrTime() < w2.getArrTime()) {
-                    return -1;
-                } else if (w1.getArrTime() > w2.getArrTime()) {
-                    return 1;
-                }
-                return 0;
 
+    // Creating a queue that sort jobs based on its Memory requirments
+    public static PriorityQueue<Job> holdQ1 = new PriorityQueue<Job>(new Comparator<Job>() {
+        @Override
+        public int compare(Job job1, Job job2) {
+
+            // If job1 memory smaller than job2 , make it in the front of the queue
+            if (job1.getMemoryUnit() < job2.getMemoryUnit()) {
+                return -1;
+
+                // If job1 memory equal job2 , check there arraiving time FIFO   
+            } else if (job1.getMemoryUnit() == job2.getMemoryUnit()) {
+
+                // If job1 arraived before job2 , make it in the front of the queue
+                if (job1.getArrTime() < job2.getArrTime()) {
+                    return -1;
+
+                    // If job1 arraived before job2 
+                } else if (job1.getArrTime() == job2.getArrTime()) {
+                    return 0;
+                }
+
+                // If job1 arraived after job2 , make it in the end of the queue
+                return 1;
+
+                // If job1 memory greater than job2 , make it in the end of the queue
             } else {
                 return 1;
             }
         }
     });
+
+    // Creating a queue that schedule jobs based on FIFO
     public static Queue<Job> holdQ2 = new LinkedList();
-    public static Queue<Job> ReadyQ = new LinkedList();
-    public static Job CPU_Process = new Job();
+    public static Queue<Job> readyQ = new LinkedList();
+    public static Job CPU_Job = new Job();
     public static Queue<Job> completeQ = new LinkedList();
-    public static Queue<Job> displayQ = new LinkedList();    
-   public static double systemTAT = 0;
+    public static double systemTAT = 0;
     public static int currentTime;
 
+    // list to save all the times in the display command
+    public static LinkedList<Integer> SystemStateTimeList = new LinkedList<Integer>();
+
     public static void main(String[] args) throws FileNotFoundException {
-//        int systemStateTime;
         String command;
-        //create file object
+
+        // Create file object
         File inputFile = new File("input3.txt");
+
+        // Check if the file exists ?
         if (!inputFile.exists()) {
             System.out.println("not exists");
             System.exit(0);
         }
 
-        // check if file exists or not .
-        // read from input file , write in outputFile .  
+        // Creat Scanner object to read from the file 
         Scanner input = new Scanner(inputFile);
-        output = new PrintWriter("output102.txt");
 
+        // Create PrintWriter object to write on the file 
+        output = new PrintWriter("output13.txt");
+
+        boolean printed = false;
+        // Loop to go through the commands
         while (input.hasNext()) {
             command = input.next();
 
+            // If it is System Configuration command
             if (command.equalsIgnoreCase("C")) {
                 systemConfiguration(input);
+                // If it is a Job Arrival command    
             } else if (command.equalsIgnoreCase("A")) {
                 jobArrivel(input);
+                // If it is a Displpay command    
             } else if (command.equalsIgnoreCase("D")) {
+
                 int systemStateTime = input.nextInt();
+                SystemStateTimeList.add(systemStateTime);
 
-                if (systemStateTime != 999999)
-                    submitQ.add(new Job(systemStateTime, -1));
-                  else {
+                // Add the display command to the submit queue with unique number 
+                submitQ.add(new Job(systemStateTime, -1));
 
-                    displayQ.addAll(submitQ);
-                    // it indicates the final state of the system
-                    // execution of jobs
-                    Job j = submitQ.poll();
+                // Flag to be sure of the execution of the system 
+                boolean executed = false;
+                
+                // Check if it is the last display 
+                if (systemStateTime >= 999999 || completeQ.size() == jobNum) {
 
-                    //It sets the system time (currentTime) to the arrival time of the first job
-                    // and allocates memory and devices based on its requirements.
-                    availableMemory = availableMemory - j.getMemoryUnit();
-                    availableDevices = serialDevices - j.getDeviceNum();
-                    currentTime = j.getArrTime();
-                    quantum = j.getBurstTime();
-                    CPU_Process = j;
-                    CPU_Process.setStatus("Running On The CPU"); //***
-                    CPU_Process.setStartTime(currentTime);
-                    CPU_Process.setFinishTime(currentTime + quantum);
-
-
-                    i = 0;
-                    e = 0;
-
-                    while (completeQ.size() != jobNum) {
-                        if (submitQ.isEmpty()) {
-                            i = 999999;
-                        } else {
-                            i = submitQ.peek().getArrTime();
-                        }
-
-                        if (CPU_Process == null) {
-                            e = 999999;
-                        } else {
-                            e = CPU_Process.getFinishTime();
-                        }
-                        currentTime = Math.min(i, e);
-
-                        if (i < e) {
-                            externalEvent();
-                        } else if (i > e) {
-                            internalEvent();
-                        } else {
-                            internalEvent();
-                            externalEvent();
-                        }
-                    }
-                    
-
+                    //Start the execution of the system  
+                    startExecution();
+                    // Print the final state of the system 
                     finalState();
-                    prepForNextConfig();
-                    systemStateTime = 0;
+                   
+                    executed = true;
 
                 }
 
+                if (!input.hasNext() && !executed) {
+                    //Start the execution of the system  
+                    startExecution();
+                    // Print the final state of the system 
+                    finalState();
+                }
+                
+                if (executed) {
+                    // Retuning the system to its initial state 
+                    prepForNextConfig();
+                }
             }
         }
 
+        // Closing rhe input and the output objects
         input.close();
         output.flush();
         output.close();
-        // END OF MAIN :)---------------------------------------------------      
 
+        // END OF MAIN Program   
     }
 
-    public static void prepForNextConfig() {
-        submitQ.clear();
-        HoldQ1.clear();
-        holdQ2.clear();
-        ReadyQ.clear();
-        completeQ.clear();
-        displayQ.clear();
-        CPU_Process = null;
-        startTime = 0;
-        memorySize = 0;
-        serialDevices = 0;
-        jobNum = 0;
-        availableMemory = 0;
-        availableDevices = 0;
-        SR = 0;
-        AR = 0;
-        systemTAT = 0;
-    }
-
+    //-----------------------------------------------------------------------------
+    // Method to configure the new system 
     public static void systemConfiguration(Scanner input) {
+
+        // Zero jobs so far in the system
         jobNum = 0;
+
+        // Read the system charactaristic 
         startTime = input.nextInt();
         memorySize = Integer.parseInt(input.next().substring(2));
         serialDevices = Integer.parseInt(input.next().substring(2));
+
+        // Initialize the available material to the maximum 
         availableMemory = memorySize;
         availableDevices = serialDevices;
     }
 
+    //-----------------------------------------------------------------------------
+    // Method to deal with the arraived jobs
     public static void jobArrivel(Scanner input) {
         int numJ, arrJ, memoJ, devJ, burstJ, prioJ;
         arrJ = Integer.parseInt(input.next());
@@ -189,329 +181,438 @@ public class Osproject {
 
     }
 
-    // 
-    public static void internalEvent() {
-        CPU_Process.setRemainBT(CPU_Process.getRemainBT() - quantum);
-        if (CPU_Process.getRemainBT() > 0) {
-            dynamicRoundRobin();
-        } else {
-            TerminateJob();
-            if (!ReadyQ.isEmpty()) {
-                CPU_Process = ReadyQ.poll();
-                CPU_Process.setStatus("Running On The CPU"); //***
-                if (AR < CPU_Process.getRemainBT()) {
-                    quantum = AR;
-                } else {
-                    quantum = CPU_Process.getRemainBT();
-                }
-//                    cpu_execution();
-                CPU_Process.setStartTime(currentTime);
-                if (quantum < CPU_Process.getRemainBT()) {
-                    CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
-                } else {
-                    CPU_Process.setFinishTime(CPU_Process.getStartTime() + CPU_Process.getRemainBT());
-                }
+    //-----------------------------------------------------------------------------
+    // Method to start the system execution 
+    public static void startExecution() {
 
+        // Get the fist job in the system
+        Job j = submitQ.poll();
+
+        //It sets the system time (currentTime) to the arrival time of the first job
+        // and allocates memory and devices based on its requirements.
+        // Allocate resources to the first job 
+        availableMemory = availableMemory - j.getMemoryUnit();
+        availableDevices = serialDevices - j.getDeviceNum();
+
+        CPU_Job = j;
+
+        // Set the current system time with the first job arrival time 
+        currentTime = CPU_Job.getArrTime();
+
+        // Set the quantum with the first job Burts time
+        quantum = CPU_Job.getBurstTime();
+
+        // execute the first job 
+        ExecuteFirstJob();
+
+        // Now we are ready to receive jobs
+        // Make the first job enter the CPU directly without the need to go through the ready queue
+        // Since we are sure the CPU is idle 
+        i = 0;
+        e = 0;
+
+        // Execute jobs till they are all in the complete queue 
+        while (completeQ.size() != jobNum) {
+
+            // i -> Time on the next input command otherwise, i is infinity
+            if (!submitQ.isEmpty()) {
+                i = submitQ.peek().getArrTime();
+            } else {
+                i = 999999;
+            }
+
+            //e -> Time of the next internal event otherwise, e is infinity
+            if (CPU_Job != null) {
+                e = CPU_Job.getFinishTime();
+            } else {
+                e = 999999;
+            }
+
+            // Make the current time the minimum of the i and e 
+            currentTime = Math.min(i, e);
+
+            // Process the external event
+            if (i < e) {
+                externalEvent();
+
+                // Process the internal event    
+            } else if (i > e) {
+                internalEvent();
+
+                // Process the internal event before the external event     
+            } else {
+                internalEvent();
+                externalEvent();
+            }
+        }
+    }
+
+    //-----------------------------------------------------------------------------
+    // Method to execute the first job that enters the CPU  
+    public static void ExecuteFirstJob() {
+
+        // Sets its starting time and finishing time 
+        CPU_Job.setStartTime(currentTime);
+        CPU_Job.setFinishTime(currentTime + quantum);
+
+    }
+
+    // -----------------------------------------------------------------------------
+    // Method to execute jobs
+    public static void executeJob() {
+
+        // Set the job its new starting and finishing times
+        CPU_Job.setStartTime(currentTime);
+
+        // Set its finishing time as the lowest between the reminder of its burts or the quantum 
+        if (quantum < CPU_Job.getRemainBT()) {
+            CPU_Job.setFinishTime(CPU_Job.getStartTime() + quantum);
+        } else {
+            CPU_Job.setFinishTime(CPU_Job.getStartTime() + CPU_Job.getRemainBT());
+        }
+
+    }
+
+    // -----------------------------------------------------------------------------
+    // Method to deal with the job inside the CPU
+    public static void internalEvent() {
+
+        // Calculate what has remained from Burts time of the job inside the CPU , and its accumulated time in it 
+        CPU_Job.setAccumulatedTime(CPU_Job.getFinishTime() - CPU_Job.getStartTime());
+        CPU_Job.setRemainBT(quantum);
+
+        // If there job need the CPU more
+        if (CPU_Job.getAccumulatedTime() != CPU_Job.getBurstTime()) {
+
+            // Switch with another job to enter the CPU 
+            SwitchJobs();
+
+            // If the job doesnt need the CPU anymore    
+        } else {
+
+            // Release its resources and make it go to the complete queue
+            TerminateJob();
+
+            // Check if the there is any jobs in the ready queue
+            if (!readyQ.isEmpty()) {
+
+                // Get the first job from the ready queue , update the SR and AR
+                CPU_Job = readyQ.poll();
                 SRAR_Update();
 
+                // Execute the job inside the CPU
+                executeJob();
+
+                // Sets its waiting time so far
+                CPU_Job.setWaitingTime(CPU_Job.getStartTime() - CPU_Job.getArrTime());
+
             }
         }
     }
 
-    public static void dynamicRoundRobin() {
-        if (ReadyQ.isEmpty()) {
-            quantum = CPU_Process.getRemainBT();
-            CPU_Process.setStartTime(currentTime);
-            if (quantum < CPU_Process.getRemainBT()) {
-                CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
-            } else {
-                CPU_Process.setFinishTime(CPU_Process.getStartTime() + CPU_Process.getRemainBT());
-            }
+    // -----------------------------------------------------------------------------
+    // Method to switch jobs from the CPU to the ready queue
+    public static void SwitchJobs() {
 
+        // If there are no other jobs waiting for the CPU
+        if (readyQ.isEmpty()) {
+
+            // Make the job stay in the CPU and execute it more 
+            executeJob();
             SRAR_Update();
+
+            // There are other jobs waiting for the CPU   
         } else {
-            ReadyQ.add(CPU_Process);
-            CPU_Process.setStatus("Ready Queue"); //***
+
+            // Return the job in the CPU back to the ready queue 
+            readyQ.add(CPU_Job);
             SRAR_Update();
-            CPU_Process = ReadyQ.poll();
-            CPU_Process.setStatus("Running On The CPU"); //***
-            if (AR < CPU_Process.getRemainBT()) {
+
+            // Get the first job in the ready queue to be in the CPU
+            CPU_Job = readyQ.poll();
+
+            // Update the quantum as the lowest of the remaining burts time or AR
+            if (CPU_Job.getRemainBT() < AR) {
+                quantum = CPU_Job.getRemainBT();
+            } else {
                 quantum = AR;
-            } else {
-                quantum = CPU_Process.getRemainBT();
             }
-            CPU_Process.setStartTime(currentTime);
-            if (quantum < CPU_Process.getRemainBT()) {
-                CPU_Process.setFinishTime(CPU_Process.getStartTime() + quantum);
-            } else {
-                CPU_Process.setFinishTime(CPU_Process.getStartTime() + CPU_Process.getRemainBT());
-            }
+
+            // Execute the job inside the CPU
+            executeJob();
+
             SRAR_Update();
 
         }
 
     }
 
-    
-    //If new Process arrives
-    //P Enter ready queue
-    //Update SR and AR
-    //End If
+    //-----------------------------------------------------------------------------
+    // Method to deal with jobs in the submit queue 
     public static void externalEvent() {
+
+        // If there is a jobs in the submit queue 
         if (submitQ.size() != 0) {
+
+            // Get the firts job in the submit queue 
             Job j = submitQ.poll();
 
-            //case of "D" job
+            // Check if the job number is for normal jobs or for the display jobs
             if (j.getJobNum() == -1) {
-                // d 22
-                specificState(j.getArrTime());
-                // . If there is enough main memory and devices for the job
-                // process is put in the Ready Queue. 
+
+                // Check if the job is for current time display or not 
+                if (j.getArrTime() < 999999) {
+
+                    // Display the current state of the system 
+                    specificState(j.getArrTime());
+                }
+
+                // If it is a normal job , check if the resources needed are met 
             } else if (j.getDeviceNum() <= availableDevices && j.getMemoryUnit() <= availableMemory) {
-                ReadyQ.add(j);
-                j.setStatus("Ready Queue"); //***
+
+                // Add it to the ready queue , update the SA and AR and gives it the resources needed
+                readyQ.add(j);
                 SRAR_Update();
                 availableDevices -= j.getDeviceNum();
                 availableMemory -= j.getMemoryUnit();
+
+                // If the available resources are not enough    
             } else {
+
+                // Make it go to one of the hold queues based on its priority 
                 if (j.getPriority() == 1) {
-                    HoldQ1.add(j);
-                    j.setStatus("Hold Queue 1"); //***
+                    holdQ1.add(j);
+
                 } else {
                     holdQ2.add(j);
-                    j.setStatus("Hold Queue 2");
                 }
             }
         }
 
     }
 
-    public static void SRAR_Update() {
-        if (!ReadyQ.isEmpty()) {
-            int totalBurstTime = 0;
-
-            for (Job job : ReadyQ) {
-                totalBurstTime += job.getRemainBT();
-
-            }
-            SR = totalBurstTime;
-            AR = SR / ReadyQ.size();
-        }
-    }
-
     // ----------------------------------------------------------------------------------
-    //TERMINATING THE JOB IN THE CPU
+    // Mehtod to terminate the job in the CPU -> not needed anymore
     public static void TerminateJob() {
 
-        // CALCULATION needed to know which way the process will go ( readyQ OR completeQ)
-        // process has finished, not needed anymore 
-        // RELEASES ANY MAIN MEMORY
-        availableMemory = availableMemory + CPU_Process.getMemoryUnit();
-        availableDevices = availableDevices + CPU_Process.getDeviceNum();
+        // Realease any allocated resources
+        availableMemory = availableMemory + CPU_Job.getMemoryUnit();
+        availableDevices = availableDevices + CPU_Job.getDeviceNum();
 
-        // release resources and go to the completedQ
-//        CPU_Process.setStatus(3);
-        completeQ.add(CPU_Process);
-        CPU_Process.setStatus("Finished At Time "+currentTime);//********
-        completeNum++;
-        CPU_Process = null;
+        // Add it to the complete queue and set its status
+        completeQ.add(CPU_Job);
 
-        // LEAVE ONE OF THE HOLD QUEUES AND MOVE TO THE READY QUEUE.
-        while (!HoldQ1.isEmpty()) {
-            Job j = HoldQ1.poll();
-            ReadyQ.add(j);
-            j.setStatus("Hold Queue 1");
-            SRAR_Update();
+        // The CPU is idle now , no job in it 
+        CPU_Job = null;
+
+        // Check the hold queus to move jobs from them to the ready queue if possible
+        int holdQ1_size = holdQ1.size();
+        for (int i = 0; i < holdQ1_size; i++) {
+
+            // Get the first job in the hold queue 1
+            Job j = holdQ1.poll();
+
+            // check if the resources needed are met  
+            if (j.getDeviceNum() <= availableDevices && j.getMemoryUnit() <= availableMemory) {
+
+                // Add it to the ready queue , update the SA and AR and gives it the resources needed
+                readyQ.add(j);
+                SRAR_Update();
+                availableDevices -= j.getDeviceNum();
+                availableMemory -= j.getMemoryUnit();
+
+                // make it go back to the hold queue 1 
+            } else {
+                holdQ1.add(j);
+            }
         }
 
-        while (!holdQ2.isEmpty()) {
+        int holdQ2_size = holdQ2.size();
+        for (int i = 0; i < holdQ2_size; i++) {
+
+            // Get the first job in the hold queue 2
             Job j = holdQ2.poll();
-            j.setStatus("Hold Queue 2");
-            ReadyQ.add(j);
-            SRAR_Update();
+
+            // check if the resources needed are met  
+            if (j.getDeviceNum() <= availableDevices && j.getMemoryUnit() <= availableMemory) {
+
+                // Add it to the ready queue , update the SA and AR and gives it the resources needed
+                readyQ.add(j);
+                SRAR_Update();
+                availableDevices -= j.getDeviceNum();
+                availableMemory -= j.getMemoryUnit();
+
+                // make it go back to the hold queue 2    
+            } else {
+                holdQ2.add(j);
+            }
         }
 
-        // INDICATING NO PROCESS IN THE CPU 
     }
 
-    // SORTING THE COMPLETE QUEUE FOR THE OUPPUT FORMAT 
-    public static void sortDisplayQueue() {
+    //-----------------------------------------------------------------------------
+    // Method to update the SA and AR
+    public static void SRAR_Update() {
+
+        if (!readyQ.isEmpty()) {
+            int totalBurstTime = 0;
+
+            // Go through all the jobs in the ready queue and gets its remainder burst time
+            for (Job job : readyQ) {
+                totalBurstTime += job.getRemainBT();
+            }
+
+            // Calculate the new SA and AR
+            SR = totalBurstTime;
+            AR = (SR / readyQ.size());
+        }
+    }
+
+    //-----------------------------------------------------------------------------
+    // Sorting the display queue based on the job number for the output format 
+    public static void sortCompleteQueue() {
 
         // Creating a list from the queue
-        List<Job> list = new ArrayList<>(displayQ);
+        List<Job> list = new ArrayList<>(completeQ);
 
         // Sort based on arrival time
         list.sort(Comparator.comparing(Job::getJobNum));
 
         // Clearing the original queue
-        displayQ.clear();
+        completeQ.clear();
 
         // Adding sorted processes back to the queue
-        displayQ.addAll(list);
+        completeQ.addAll(list);
     }
 
-  
-    //------------
+    //-----------------------------------------------------------------------------
+    // Method to display a specific state of the system 
     public static void specificState(int currentTime) {
-        output.println("System Configuration:	Memory size: " + memorySize + "		No of devices: " + serialDevices
-                + "\nDisplay Command: currunt time: "+currentTime+"\n"
-                + "-----------------------------------------------------------------------------------------------------------------");
-        sortDisplayQueue();
-        output.println("|  Process   |      Status      |   Burst Time  |     Arrival Time    |  Completion Time | Turnaround Time |"
-                +        "\n|------------+------------------+---------------+---------------------+------------------+-----------------|");
 
-       for (Job job : displayQ) {
-       if(job.getJobNum() !=-1 && job.getArrTime() <= currentTime)
-       output.printf(" %-12d %-25s %-18d %-19d %-15d %3d\n", job.getJobNum(),job.getStatus(),job.getBurstTime(), job.getArrTime(),job.getFinishTime(),job.getTAT());
-        }
-        output.println("");
-        int firstCount = 1;
-        
-        if(!submitQ.isEmpty()){
-        for (Job job : submitQ) {
-            if (job.getJobNum() != -1) {
-                if (firstCount == 1) {
-                    output.print("Contents of Submit Ready Queue: " + job.getJobNum());
-                } else {
-                   output.print(" , " + job.getJobNum());
-                }
-                firstCount++;
-            }
-        }
-        }else {
-            output.print("Contents of Submit Ready Queue: No Processes");
-        }
-        
-        output.println("");
-        if(!ReadyQ.isEmpty()){
-        firstCount = 1;
-        for (Job job : ReadyQ) {
-            if (firstCount == 1) {
-                output.print("Contents of Ready Queue: " + job.getJobNum());
+        output.println("\n<< At time " + currentTime + ": \n"
+                + "  Current Available Main Memory = " + availableMemory + "\n"
+                + "  Current Devices               = " + availableDevices + " \n\n"
+                + "  Completed jobs: \n"
+                + "  ----------------\n"
+                + "  Job ID   Burst Time  Arrival Time    Finish Time  Turnaround Time  Waiting Time\n"
+                + "  =================================================================");
+
+        // Sort the complete queue based on the job numbers
+        sortCompleteQueue();
+
+        // Go through the complete queue 
+        for (Job job : completeQ) {
+
+            // Check if the job number less than 10 for fromat purposes
+            if (job.getJobNum() > 9) {
+                output.print("   " + job.getJobNum());
             } else {
-                output.print(" , " + job.getJobNum());
+                output.printf("    " + job.getJobNum());
             }
-            firstCount++;
+
+            output.printf(" %10d%13d%15d%12d%15d\n", job.getBurstTime(), job.getArrTime(), job.getFinishTime(), job.getTAT(), job.getWaitingTime());
         }
-        }else {
-             output.print("Contents of Ready Queue: No Processes");
+
+        // Go through the hold queue 1
+        output.print("\n\n  Hold Queue 1: \n  ----------------\n   ");
+        if (!holdQ1.isEmpty()) {
+            for (Job job : holdQ1) {
+                output.print(job.getJobNum() + "     ");
+            }
+        } else {
+            output.println();
         }
-        
-        output.println("");
-        if(!HoldQ1.isEmpty()){
-        firstCount = 1;
-        for (Job job : HoldQ1) {
-            if (firstCount == 1) {
-                output.print("Contents of Hold Queue 1: " + job.getJobNum());
+
+        // Go through the hold queue 2
+        output.println("\n\n\n  Hold Queue 2: \n  ----------------\n   ");
+        if (!holdQ2.isEmpty()) {
+            for (Job job : holdQ2) {
+                output.print(job.getJobNum() + "     ");
+            }
+        } else {
+            output.println();
+        }
+
+        // Go through the ready queue
+        output.print("\n\n  Ready Queue : \n  ----------------\n   ");
+        if (!readyQ.isEmpty()) {
+            for (Job job : readyQ) {
+                output.print(job.getJobNum() + "     ");
+            }
+        } else {
+            output.println();
+        }
+
+        // display the job inside the CPU
+        output.println("\n\n\n  Process running on the CPU: \n"
+                + "  ----------------------------\n"
+                + "  Job ID   Run Time   Time Left");
+
+        if (CPU_Job != null) {
+            output.printf("   %d %10d %11d\n", CPU_Job.getJobNum(), CPU_Job.getBurstTime(), CPU_Job.getRemainBT());
+        } else {
+            output.println();
+        }
+        output.println();
+    }
+
+    //-----------------------------------------------------------------------------
+    // Method to display the final state of the system 
+    public static void finalState() {
+
+        output.println("<< Final state of system:\n"
+                + "  Current Available Main Memory = " + availableMemory + "\n"
+                + "  Current Devices               = " + availableDevices + " \n\n"
+                + "  Completed jobs: \n"
+                + "  ----------------\n"
+                + "  Job ID   Burst Time  Arrival Time    Finish Time  Turnaround Time  Waiting Time\n"
+                + "  =================================================================");
+
+        // Sort the complete queue based on the job numbers
+        sortCompleteQueue();
+
+        // Go through the complete queue 
+        for (Job job : completeQ) {
+
+            // Check if the job number less than 10 for fromat purposes
+            if (job.getJobNum() > 9) {
+                output.print("   " + job.getJobNum());
             } else {
-                output.print(" , " + job.getJobNum());
+                output.printf("    " + job.getJobNum());
             }
-            firstCount++;
+
+            output.printf(" %10d%13d%15d%12d%15d\n", job.getBurstTime(), job.getArrTime(), job.getFinishTime(), job.getTAT(), job.getWaitingTime());
+
+            // Sum all the jobs TAT
+            systemTAT += job.getTAT();
         }
-        }else {
-             output.print("Contents of Hold Queue 1: No Processes");
-        }
-        
-        output.println("");
-        if(!holdQ2.isEmpty()){
-        firstCount = 1;
-        for (Job job : holdQ2) {
-            if (firstCount == 1) {
-               output.print("Contents of Hold Queue 2: " + job.getJobNum());
-            } else {
-                output.print(" , " + job.getJobNum());
-            }
-            firstCount++;
-        }
-        }else {
-             output.print("Contents of Hold Queue 2: No Processes");
-        }
-        output.println("");
-        output.println("------------------------------------------------------------------------");
+
+        // Calculate and d isplay the system TAT
+        output.printf("\n\n  System Turnaround Time =  %.3f\n\n\n*********************************************************************\n\n", (systemTAT / completeQ.size()));
 
     }
 
-    public static void finalState() {
-         output.println("System Configuration:	Memory size: " + memorySize + "		No of devices: " + serialDevices
-                + "\nDisplay Command:\n"
-                + "-----------------------------------------------------------------------------------------------------------------");
-        sortDisplayQueue();
-        output.println("|  Process   |      Status      |   Burst Time  |     Arrival Time    |  Completion Time | Turnaround Time |"
-                +        "\n|------------+------------------+---------------+---------------------+------------------+-----------------|");
+    //-----------------------------------------------------------------------------
+    // Method to return the system to its initial state
+    public static void prepForNextConfig() {
 
-        for (Job job : displayQ) {
-       if(job.getJobNum() !=-1){
-       output.printf(" %-12d %-25s %-18d %-19d %-15d %3d\n", job.getJobNum(),job.getStatus(),job.getBurstTime(), job.getArrTime(),job.getFinishTime(),job.getTAT());
-      systemTAT+= job.getTAT();
-       }
-        }
-        output.println("");
-        int firstCount = 1;
-        
-        if(!submitQ.isEmpty()){
-        for (Job job : submitQ) {
-            if (job.getJobNum() != -1) {
-                if (firstCount == 1) {
-                    output.print("Contents of Submit Ready Queue: " + job.getJobNum());
-                } else {
-                   output.print(" , " + job.getJobNum());
-                }
-                firstCount++;
-            }
-        }
-        }else {
-            output.print("Contents of Submit Ready Queue: No Processes");
-        }
-        
-        output.println("");
-        if(!ReadyQ.isEmpty()){
-        firstCount = 1;
-        for (Job job : ReadyQ) {
-            if (firstCount == 1) {
-                output.print("Contents of Ready Queue: " + job.getJobNum());
-            } else {
-                output.print(" , " + job.getJobNum());
-            }
-            firstCount++;
-        }
-        }else {
-             output.print("Contents of Ready Queue: No Processes");
-        }
-        
-        output.println("");
-        if(!HoldQ1.isEmpty()){
-        firstCount = 1;
-        for (Job job : HoldQ1) {
-            if (firstCount == 1) {
-                output.print("Contents of Hold Queue 1: " + job.getJobNum());
-            } else {
-                output.print(" , " + job.getJobNum());
-            }
-            firstCount++;
-        }
-        }else {
-             output.print("Contents of Hold Queue 1: No Processes");
-        }
-        
-        output.println("");
-        if(!holdQ2.isEmpty()){
-        firstCount = 1;
-        for (Job job : holdQ2) {
-            if (firstCount == 1) {
-               output.print("Contents of Hold Queue 2: " + job.getJobNum());
-            } else {
-                output.print(" , " + job.getJobNum());
-            }
-            firstCount++;
-        }
-        }else {
-             output.print("Contents of Hold Queue 2: No Processes");
-        }
-        output.println("");
-        output.println("------------------------------------------------------------------------");
-        output.printf("System Turnaround Time: %.2f\n" , (systemTAT / completeQ.size()));
-        output.println("------------------------------------------------------------------------\n\n");
-
+        // Cleare all the queues , variables = 0
+        submitQ.clear();
+        holdQ1.clear();
+        holdQ2.clear();
+        readyQ.clear();
+        completeQ.clear();
+        CPU_Job = null;
+        startTime = 0;
+        memorySize = 0;
+        serialDevices = 0;
+        jobNum = 0;
+        availableMemory = 0;
+        availableDevices = 0;
+        SR = 0;
+        AR = 0;
+        systemTAT = 0;
+        SystemStateTimeList.clear();
     }
 
 }
