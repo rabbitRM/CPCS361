@@ -1,13 +1,18 @@
-
-
-
 /*
+Name:Amina Rajkhan , ID: 2010077 , Section: IAR
+Compiler Name and Version: NetBeans IDE 8.2
+Hardware Configuration:     
+Operating System and Version:Mac OS
 
 Name: Rama Ahmad Alsefri , ID: 2105895 , Section: DAR 
 Compiler Name and Version: NetBeans IDE 8.2
-Hardware Configuration: Inter core i7 - 16 GB RAM
+Hardware Configuration: Intel core i7 , 16 GB RAM
 Operating System and Version: 64-bit Windows 10 Home 22H2
 
+Name:  Areej Baeshen , ID: 2105759 , Section: IAR
+Compiler Name and Version: Netbeans IDE 8.2 
+Hardware Configuration: Intel core i5   
+Operating System and Version: Mac OS
 
  */
 import java.io.File;
@@ -21,7 +26,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Scanner;
 
-public class DRRproject {
+public class DRR {
 
     private static int startTime;
     private static int memorySize;
@@ -31,7 +36,7 @@ public class DRRproject {
     private static int availableDevices;
     public static int i;
     public static int e;
-    public static int quantum;
+    public static int quantum ;
     public static int SR;
     public static int AR;
     public static PrintWriter output;
