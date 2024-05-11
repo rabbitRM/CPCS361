@@ -1,12 +1,18 @@
-
 /*
+Name:Amina Rajkhan , ID: 2010077 , Section: IAR
+Compiler Name and Version: NetBeans IDE 8.2
+Hardware Configuration:     
+Operating System and Version:Mac OS
 
 Name: Rama Ahmad Alsefri , ID: 2105895 , Section: DAR 
 Compiler Name and Version: NetBeans IDE 8.2
-Hardware Configuration: Inter core i7 - 16 GB RAM
+Hardware Configuration: Intel core i7 , 16 GB RAM
 Operating System and Version: 64-bit Windows 10 Home 22H2
 
-
+Name:  Areej Baeshen , ID: 2105759 , Section: IAR
+Compiler Name and Version: Netbeans IDE 8.2 
+Hardware Configuration: Intel core i5   
+Operating System and Version: Mac OS
 
  */
 import java.io.File;
