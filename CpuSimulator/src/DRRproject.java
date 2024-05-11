@@ -477,15 +477,15 @@ public class DRR {
     public static void SRAR_Update() {
 
         if (!readyQ.isEmpty()) {
-            int totalBurstTime = 0;
+            int totalRemainBurTime = 0;
 
             // Go through all the jobs in the ready queue and gets its remainder burst time
             for (Job job : readyQ) {
-                totalBurstTime += job.getRemainBT();
+                totalRemainBurTime += job.getRemainBT();
             }
 
             // Calculate the new SA and AR
-            SR = totalBurstTime;
+            SR = totalRemainBurTime;
             AR = SR / readyQ.size();
         }
     }
